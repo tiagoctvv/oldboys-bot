@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require('express');
 const app = express();
-app.get('/', (req, res) => { res.send('Bot Online 24/7'); });
+app.get('/', (req, res) => { res.send('OLD BOYS Bot - Online'); });
 app.listen(process.env.PORT || 3000);
 
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, Events, REST, Routes, SlashCommandBuilder, StringSelectMenuBuilder } = require("discord.js");
@@ -9,7 +9,7 @@ const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const LOG_CHANNEL_ID = '1386624532860899509'; // Coloca aqui o ID que copiaste
+const LOG_CHANNEL_ID = 'ID_DO_TEU_CANAL_DE_LOGS'; // Coloca aqui o teu ID de logs
 
 const CONFIG = {
   nome: "OLD BOYS TOURNAMENT 🏆",
@@ -19,7 +19,7 @@ const CONFIG = {
   posicoes: ["GR", "DC", "ALA", "MDC", "MC", "MCO", "PL"]
 };
 
-let estado = { participantes: [], listaEspera: [], capitoes: [], posicoes: {}, canalId: null, mensagemPrincipalId: null };
+let estado = { participantes: [], listaEspera: [], capitoes: [], posicoes: {}, canalId: null, mensagemPrincipalId: null, aAtualizar: false };
 
 function criarEmbed() {
   const contagem = {}; CONFIG.posicoes.forEach(p => contagem[p] = 0);
@@ -44,7 +44,7 @@ function criarEmbed() {
       { name: "👑 Capitães", value: `\`${estado.capitoes.length}/${CONFIG.maxCapitoes}\``, inline: true },
       { name: "📊 Resumo de Posições", value: CONFIG.posicoes.map(p => `**${p}:** ${contagem[p]}`).join(" | "), inline: false }
     )
-    .setFooter({ text: "OLD BOYS System • Atualizado em tempo real" })
+    .setFooter({ text: `OLD BOYS System • Última Atualização:` })
     .setTimestamp();
 }
 
@@ -61,13 +61,31 @@ async function enviarLog(texto) {
     } catch (e) { console.log("Erro log"); }
 }
 
+// --- ATUALIZAÇÃO DO PAINEL COM PROTEÇÃO E RE-TRY ---
 async function atualizarPainel() {
+    // Evita múltiplas edições ao mesmo tempo (uma de cada vez)
+    if (estado.aAtualizar) return;
+    estado.aAtualizar = true;
+
     try {
-        if (!estado.canalId || !estado.mensagemPrincipalId) return;
+        if (!estado.canalId || !estado.mensagemPrincipalId) { estado.aAtualizar = false; return; }
         const canal = client.channels.cache.get(estado.canalId) || await client.channels.fetch(estado.canalId);
         const msg = await canal.messages.fetch(estado.mensagemPrincipalId);
         await msg.edit({ embeds: [criarEmbed()], components: [rowPrincipal] });
-    } catch (e) { console.error("Erro painel"); }
+    } catch (e) { 
+        console.error("Erro painel, a tentar novamente..."); 
+        // Tenta editar novamente 2 segundos depois se falhar
+        setTimeout(async () => {
+            try {
+                const canal = await client.channels.fetch(estado.canalId);
+                const msg = await canal.messages.fetch(estado.mensagemPrincipalId);
+                await msg.edit({ embeds: [criarEmbed()], components: [rowPrincipal] });
+            } catch (e2) { console.error("Falha final no painel"); }
+        }, 2000);
+    } finally {
+        // Liberta a função para o próximo clique
+        estado.aAtualizar = false;
+    }
 }
 
 client.once(Events.ClientReady, async () => {
@@ -86,7 +104,8 @@ client.on(Events.InteractionCreate, async int => {
       if (int.commandName === "reset") {
           estado.participantes = []; estado.listaEspera = []; estado.capitoes = []; estado.posicoes = {};
           await int.reply({ content: "⚠️ O torneio foi resetado!", ephemeral: true });
-          return await atualizarPainel();
+          await atualizarPainel();
+          return;
       }
       const msg = await int.reply({ embeds: [criarEmbed()], components: [rowPrincipal], fetchReply: true });
       estado.canalId = int.channelId; estado.mensagemPrincipalId = msg.id;
