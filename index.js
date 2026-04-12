@@ -1,4 +1,17 @@
 require("dotenv").config();
+const express = require('express');
+const app = express();
+
+// --- CONFIGURAÇÃO PARA O RENDER NÃO DESLIGAR ---
+app.get('/', (req, res) => {
+  res.send('Bot OLD BOYS está online e funcional!');
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor de monitorização pronto na porta ${PORT}`);
+});
+// ----------------------------------------------
 
 const {
   Client,
@@ -19,7 +32,7 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 
 if (!TOKEN || !CLIENT_ID) {
-  console.error("Falta o TOKEN ou o CLIENT_ID no ficheiro .env");
+  console.error("Erro: Falta o TOKEN ou o CLIENT_ID nas Environment Variables do Render.");
   process.exit(1);
 }
 
@@ -908,6 +921,12 @@ ${formatarResumoPosicoes()}`,
       await interaction.reply({
         content: "Ocorreu um erro ao processar esta ação.",
         ephemeral: true
+      });
+    }
+  }
+});
+
+client.login(TOKEN);
       });
     }
   }
