@@ -9,7 +9,7 @@ const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const LOG_CHANNEL_ID = '1490853964164501646'; // Coloca aqui o ID que copiaste
+const LOG_CHANNEL_ID = '1386624532860899509'; // Coloca aqui o ID que copiaste
 
 const CONFIG = {
   nome: "OLD BOYS TOURNAMENT 🏆",
