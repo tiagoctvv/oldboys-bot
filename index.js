@@ -912,7 +912,7 @@ ${formatarResumoPosicoes()}`,
   } catch (error) {
     console.error("Erro na interação:", error);
 
-    if (interaction.replied || interaction.deferred) {
+if (interaction.replied || interaction.deferred) {
       await interaction.followUp({
         content: "Ocorreu um erro ao processar esta ação.",
         ephemeral: true
@@ -923,12 +923,8 @@ ${formatarResumoPosicoes()}`,
         ephemeral: true
       });
     }
-  }
-});
-
-client.login(TOKEN);
-      });
-    }
+  } catch (error) {
+    console.error("Erro na interação:", error);
   }
 });
 
