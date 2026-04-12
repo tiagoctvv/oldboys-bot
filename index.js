@@ -9,7 +9,7 @@ const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const LOG_CHANNEL_ID = 'ID_DO_TEU_CANAL_DE_LOGS'; // Coloca aqui o teu ID de logs
+const LOG_CHANNEL_ID = 'ID_DO_TEU_CANAL_DE_LOGS'; // <--- GARANTE QUE O TEU ID ESTÁ AQUI
 
 const CONFIG = {
   nome: "OLD BOYS TOURNAMENT 🏆",
@@ -55,15 +55,14 @@ const rowPrincipal = new ActionRowBuilder().addComponents(
 );
 
 async function enviarLog(texto) {
+    if (!texto) return;
     try {
         const canal = await client.channels.fetch(LOG_CHANNEL_ID);
-        if (canal) canal.send(`📝 **[LOG]:** ${texto}`);
+        if (canal) await canal.send(`📝 **[LOG]:** ${texto}`);
     } catch (e) { console.log("Erro log"); }
 }
 
-// --- ATUALIZAÇÃO DO PAINEL COM PROTEÇÃO E RE-TRY ---
 async function atualizarPainel() {
-    // Evita múltiplas edições ao mesmo tempo (uma de cada vez)
     if (estado.aAtualizar) return;
     estado.aAtualizar = true;
 
@@ -74,7 +73,6 @@ async function atualizarPainel() {
         await msg.edit({ embeds: [criarEmbed()], components: [rowPrincipal] });
     } catch (e) { 
         console.error("Erro painel, a tentar novamente..."); 
-        // Tenta editar novamente 2 segundos depois se falhar
         setTimeout(async () => {
             try {
                 const canal = await client.channels.fetch(estado.canalId);
@@ -83,7 +81,6 @@ async function atualizarPainel() {
             } catch (e2) { console.error("Falha final no painel"); }
         }, 2000);
     } finally {
-        // Liberta a função para o próximo clique
         estado.aAtualizar = false;
     }
 }
@@ -118,22 +115,27 @@ client.on(Events.InteractionCreate, async int => {
 
     if (int.customId === "entrar") {
       if (estado.participantes.includes(uid) || estado.listaEspera.includes(uid)) return;
+      
+      let logMsg = "";
       if (estado.participantes.length < CONFIG.maxJogadores) {
         estado.participantes.push(uid);
-        enviarLog(`<@${uid}> entrou.`);
+        logMsg = `<@${uid}> entrou.`;
       } else {
         estado.listaEspera.push(uid);
-        enviarLog(`<@${uid}> em espera.`);
+        logMsg = `<@${uid}> em espera.`;
       }
+      
       await atualizarPainel();
+      await enviarLog(logMsg);
     } 
     else if (int.customId === "sair") {
       estado.participantes = estado.participantes.filter(id => id !== uid);
       estado.listaEspera = estado.listaEspera.filter(id => id !== uid);
       estado.capitoes = estado.capitoes.filter(id => id !== uid);
       delete estado.posicoes[uid];
-      enviarLog(`<@${uid}> saiu.`);
+      
       await atualizarPainel();
+      await enviarLog(`<@${uid}> saiu.`);
     } 
     else if (int.customId === "mais_opcoes") {
         const extras = new ActionRowBuilder().addComponents(
@@ -155,6 +157,7 @@ client.on(Events.InteractionCreate, async int => {
         if (estado.capitoes.length < CONFIG.maxCapitoes && estado.participantes.includes(uid) && !estado.capitoes.includes(uid)) {
             estado.capitoes.push(uid);
             await atualizarPainel();
+            await enviarLog(`<@${uid}> agora é Capitão.`);
             await int.followUp({ content: "👑 Agora és capitão!", ephemeral: true });
         }
     } 
@@ -165,6 +168,7 @@ client.on(Events.InteractionCreate, async int => {
     else if (int.customId === "sel_pos") {
         estado.posicoes[uid] = int.values;
         await atualizarPainel();
+        await enviarLog(`<@${uid}> mudou posição para ${int.values[0]}.`);
         await int.followUp({ content: `✅ Posição \`${int.values[0]}\` guardada!`, ephemeral: true });
     }
   } catch (e) { console.error(e); }
