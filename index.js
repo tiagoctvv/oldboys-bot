@@ -1,4 +1,19 @@
 require("dotenv").config();
+
+// ====== SERVIDOR (FIX RENDER) ======
+const express = require("express");
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Bot OLD BOYS online ✅");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("Servidor web ativo na porta " + PORT);
+});
+
+// ====== DISCORD ======
 const {
   Client,
   GatewayIntentBits,
@@ -20,7 +35,7 @@ const MAX_PLAYERS = 44;
 let players = [];
 let waitingList = [];
 let captains = [];
-let positions = {}; // userId: ["PL", "MC"]
+let positions = {};
 
 // ====== FUNÇÕES ======
 function shuffle(array) {
@@ -30,7 +45,6 @@ function shuffle(array) {
 function createTeams() {
   let list = [...players];
 
-  // opcional: ordenar por posição
   list.sort((a, b) => {
     const posA = positions[a]?.[0] || "ZZ";
     const posB = positions[b]?.[0] || "ZZ";
@@ -103,7 +117,7 @@ function positionMenu() {
   );
 }
 
-// ====== COMANDO INICIAL ======
+// ====== INTERAÇÕES ======
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.isChatInputCommand()) {
     if (interaction.commandName === "draft") {
@@ -114,11 +128,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 
-  // ====== BOTÕES ======
   if (interaction.isButton()) {
     const id = interaction.user.id;
 
-    // ENTRAR
     if (interaction.customId === "join") {
       if (players.includes(id) || waitingList.includes(id)) {
         return interaction.reply({ content: "Já estás inscrito.", ephemeral: true });
@@ -136,7 +148,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // SAIR
     if (interaction.customId === "leave") {
       players = players.filter(p => p !== id);
       waitingList = waitingList.filter(p => p !== id);
@@ -152,7 +163,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // MAIS OPÇÕES
     if (interaction.customId === "more") {
       await interaction.reply({
         content: "Opções:",
@@ -161,7 +171,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // POSIÇÕES
     if (interaction.customId === "position") {
       if (!players.includes(id)) {
         return interaction.reply({ content: "Primeiro entra no draft.", ephemeral: true });
@@ -174,7 +183,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // SER CAPITÃO
     if (interaction.customId === "captain") {
       if (!players.includes(id)) {
         return interaction.reply({ content: "Tens de estar no draft.", ephemeral: true });
@@ -192,7 +200,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // SORTEAR CAPITÃES
     if (interaction.customId === "random_captain") {
       captains = shuffle(players).slice(0, 4);
 
@@ -202,7 +209,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
       });
     }
 
-    // SORTEAR EQUIPAS
     if (interaction.customId === "draw") {
       if (players.length < 44) {
         return interaction.reply({ content: "Precisas de 44 jogadores.", ephemeral: true });
@@ -223,7 +229,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
   }
 
-  // ====== MENU POSIÇÕES ======
   if (interaction.isStringSelectMenu()) {
     if (interaction.customId === "select_pos") {
       positions[interaction.user.id] = interaction.values;
@@ -236,5 +241,4 @@ client.on(Events.InteractionCreate, async (interaction) => {
   }
 });
 
-// ====== LOGIN ======
 client.login(process.env.TOKEN);
